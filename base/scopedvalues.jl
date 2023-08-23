@@ -149,11 +149,14 @@ This is similar to using [`scoped`](@ref) with a `do` block, but avoids creating
 a closure.
 """
 macro scoped(exprs...)
-    ex = last(exprs)
     if length(exprs) > 1
+        ex = last(exprs)
         exprs = exprs[1:end-1]
-    else
+    elseif length(exprs) == 1
+        ex = only(args)
         exprs = ()
+    else
+        error("@scoped expects at least one argument")
     end
     for expr in exprs
         if expr.head !== :call || first(expr.args) !== :(=>)
