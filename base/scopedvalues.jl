@@ -18,17 +18,17 @@ Dynamic scopes are propagated across tasks.
 
 # Examples
 ```jldoctest
-julia> const svar = ScopedValue(1);
+julia> const sval = ScopedValue(1);
 
-julia> svar[]
+julia> sval[]
 1
 
-julia> scoped(svar => 2) do
-           svar[]
+julia> scoped(sval => 2) do
+           sval[]
        end
 2
 
-julia> svar[]
+julia> sval[]
 1
 ```
 

@@ -13,59 +13,59 @@ import Base: ScopedValues
     @test_throws MethodError ScopedValue()
 end
 
-const svar = ScopedValue(1)
+const sval = ScopedValue(1)
 @testset "inheritance" begin
-    @test svar[] == 1
+    @test sval[] == 1
     scoped() do
-        @test svar[] == 1
+        @test sval[] == 1
         scoped() do
-            @test svar[] == 1
+            @test sval[] == 1
         end
-        scoped(svar => 2) do
-            @test svar[] == 2
+        scoped(sval => 2) do
+            @test sval[] == 2
         end
-        @test svar[] == 1
+        @test sval[] == 1
     end
-    @test svar[] == 1
+    @test sval[] == 1
 end
 
-const svar_float = ScopedValue(1.0)
+const sval_float = ScopedValue(1.0)
 
 @testset "multiple scoped values" begin
-    scoped(svar => 2, svar_float => 2.0) do
-        @test svar[] == 2
-        @test svar_float[] == 2.0
+    scoped(sval => 2, sval_float => 2.0) do
+        @test sval[] == 2
+        @test sval_float[] == 2.0
     end
-    scoped(svar => 2, svar => 3) do
-        @test svar[] == 3
+    scoped(sval => 2, sval => 3) do
+        @test sval[] == 3
     end
 end
 
 emptyf() = nothing
 
 @testset "conversion" begin
-    scoped(emptyf, svar_float=>2)
-    @test_throws MethodError scoped(emptyf, svar_float=>"hello")
+    scoped(emptyf, sval_float=>2)
+    @test_throws MethodError scoped(emptyf, sval_float=>"hello")
 end
 
 import Base.Threads: @spawn
 @testset "tasks" begin
     @test fetch(@spawn begin
-        svar[]
+        sval[]
     end) == 1
-    scoped(svar => 2) do
+    scoped(sval => 2) do
         @test fetch(@spawn begin
-            svar[]
+            sval[]
         end) == 2
     end
 end
 
 @testset "show" begin
-    @test sprint(show, svar) == "ScopedValue{$Int}(1)"
+    @test sprint(show, sval) == "ScopedValue{$Int}(1)"
     @test sprint(show, ScopedValues.current_scope()) == "nothing"
-    scoped(svar => 2.0) do
-        @test sprint(show, svar) == "ScopedValue{$Int}(2)"
-        objid = sprint(show, Base.objectid(svar))
+    scoped(sval => 2.0) do
+        @test sprint(show, sval) == "ScopedValue{$Int}(2)"
+        objid = sprint(show, Base.objectid(sval))
         @test sprint(show, ScopedValues.current_scope()) == "Base.ScopedValues.Scope(ScopedValue{$Int}@$objid => 2)"
     end
 end
@@ -85,37 +85,37 @@ end
 @testset "nested scoped" begin
     @testset for depth in 1:16
         nth_scoped(depth) do
-            @test svar_float[] == 1.0
+            @test sval_float[] == 1.0
         end
-        scoped(svar_float=>2.0) do
+        scoped(sval_float=>2.0) do
             nth_scoped(depth) do
-                @test svar_float[] == 2.0
+                @test sval_float[] == 2.0
             end
         end
         nth_scoped(depth) do
-            scoped(svar_float=>2.0) do
-                @test svar_float[] == 2.0
+            scoped(sval_float=>2.0) do
+                @test sval_float[] == 2.0
             end
         end
     end
-    scoped(svar_float=>2.0) do
+    scoped(sval_float=>2.0) do
         nth_scoped(15) do
-            @test svar_float[] == 2.0
-            scoped(svar_float => 3.0) do
-                @test svar_float[] == 3.0
+            @test sval_float[] == 2.0
+            scoped(sval_float => 3.0) do
+                @test sval_float[] == 3.0
             end
         end
     end
 end
 
 @testset "macro" begin
-    @scoped svar=>2 svar_float=>2.0 begin
-        @test svar[] == 2
-        @test svar_float[] == 2.0
+    @scoped sval=>2 sval_float=>2.0 begin
+        @test sval[] == 2
+        @test sval_float[] == 2.0
     end
     # Doesn't do much...
     @scoped begin
-        @test svar[] == 1
-        @test svar_float[] == 1.0
+        @test sval[] == 1
+        @test sval_float[] == 1.0
     end
 end

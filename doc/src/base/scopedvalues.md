@@ -133,7 +133,7 @@ end
 ```
 
 ## Idioms
-### [Unshare mutable state]((@id unshare_mutable_state))
+### [Unshare mutable state](@id unshare_mutable_state)
 
 ```julia
 import Base.Threads: @spawn
@@ -150,7 +150,7 @@ const sval_dict = ScopedValue(Dict())
 end
 ```
 
-### Local caching
+### [Local caching](@id local_caching)
 
 Since lookup of a scoped variable is linear in scope depth, it can be beneficial
 for a library at an API boundary to cache the state of the scoped value.
@@ -165,6 +165,33 @@ function solve_problem(args...)
     end
 ```
 
+### Scoped values as globals
+
+In order to access the value of a scoped value, the scoped value itself has to
+be in (lexical) scope. This means most often you likely want to used scoped values
+as constant globals.
+
+```julia
+const sval = ScopedValue(1)
+```
+
+Indeed one can think of scoped values as hidden function arguments.
+
+This does not preclude their use as non-globals.
+
+```julia
+import Base.Threads: @spawn
+function main()
+    role = ScopedValue(:client)
+
+    @scoped role => :server @spawn launch(role[])
+    launch(role[])
+end
+```
+
+But it might have been simpler to just directly pass the function argument
+in these cases.
+
 ## API docs
 
 ```@docs
@@ -172,3 +199,22 @@ Base.ScopedValues.ScopedValue
 Base.ScopedValues.scoped
 Base.ScopedValues.@scoped
 ```
+
+## Implementation notes and performance
+
+`Scope`s form a linked-list that must be searched to find the most recent
+assignment of the scoped value. In essence `Scope` is an immutable dictionary
+from `ScopeValue` to current value. Scope entry is `O(1)` and cheap but
+accessing a scoped value has a cost of `O(n)` where `n` is the scope depth.
+
+[Local caching](@ref local_caching) allows the developer to mitigate this cost
+if frequent access to a particular scoped value is required.
+The `Scope` object itself is not user-facing and may be replaced in a future
+version of Julia.
+
+## Design inspiration
+
+This design was heavily inspired by [JEPS-429](https://openjdk.org/jeps/429),
+which in turn was inspired by dynamically scoped free variables in many Lisp dialects. In particular Interlisp-D and it's deep binding strategy.
+
+A prior design discussed was context variables ala [PEPS-567](https://peps.python.org/pep-0567/) and implemented in Julia as [ContextVariablesX.jl](https://github.com/tkf/ContextVariablesX.jl).
