@@ -1,9 +1,17 @@
-# Scoped Values
+# [Scoped Values](@id scoped-values)
 
 Scoped values provide an implementation of dynamic scoping in Julia.
-Dynamic scope means that the state of the value is dependent on the execution path
-of the program. This means that for a scoped value you may observe
-multiple different values at the same time.
+
+!!! note "Lexical scoping vs dynamic scoping"
+    [Lexical scoping](@ref scope-of-variables) is the default behavior in Julia.
+    Under lexical scoping the scope of a variable is determined by the lexical
+    (textual) structure of a program.
+    Under dynamic scoping a variable is bound to the most recent assigned value
+    during the program's execution.
+
+The state of a scoped value is dependent on the execution path of the program.
+This means that for a scoped value you may observe multiple different values
+concurrently.
 
 !!! compat "Julia 1.11"
     Scoped values were introduced in Julia 1.11. In Julia 1.8+ a compatible
@@ -12,6 +20,7 @@ multiple different values at the same time.
 In its simplest form you can create a [`ScopedValue`](@ref) with a
 default value and then use [`scoped`](@ref) or [`@scoped`](@ref) to
 enter a new dynamic scope.
+
 The new scope will inherit all values from the parent scope
 (and recursively from all outer scopes) with the provided scoped
 value taking priority over previous definitions.
@@ -46,7 +55,7 @@ with_state(f, state::State) = @scoped(STATE => state, f())
 ```
 
 !!! note
-    Dynamic scopes are propagated through [`Task`](@ref)s.
+    Dynamic scopes are inherited by [`Task`](@ref)s, at the moment of task creation. Dynamic scopes are **not** propagated through `Distributed.jl` operations.
 
 In the example below we open a new dynamic scope before launching a task.
 The parent task and the two child tasks observe independent values of the
@@ -159,7 +168,8 @@ for a library at an API boundary to cache the state of the scoped value.
 const DEVICE = ScopedValue(:CPU)
 
 function solve_problem(args...)
-    # Cache current device
+    # Cache current device, by putting it
+    # on top of the scope stack.
     @scoped DEVICE => DEVICE[] begin
         # call functions that use `DEVICE[]` repeatedly.
     end
@@ -168,7 +178,7 @@ function solve_problem(args...)
 ### Scoped values as globals
 
 In order to access the value of a scoped value, the scoped value itself has to
-be in (lexical) scope. This means most often you likely want to used scoped values
+be in (lexical) scope. This means most often you likely want to use scoped values
 as constant globals.
 
 ```julia
