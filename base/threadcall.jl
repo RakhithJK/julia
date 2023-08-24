@@ -1,7 +1,7 @@
 # This file is a part of Julia. License is MIT: https://julialang.org/license
 
 const max_ccall_threads = parse(Int, get(ENV, "UV_THREADPOOL_SIZE", "4"))
-const thread_notifiers = Union{Base.Condition, Nothing}[nothing for i in 1:max_ccall_threads]
+const thread_notifiers = Union{Threads.Condition, Nothing}[nothing for i in 1:max_ccall_threads]
 const threadcall_restrictor = Semaphore(max_ccall_threads)
 
 """
@@ -59,7 +59,12 @@ function do_threadcall(fun_ptr::Ptr{Cvoid}, cfptr::Ptr{Cvoid}, rettype::Type, ar
     c_notify_fun = @cfunction(
         function notify_fun(idx)
             global thread_notifiers
-            notify(thread_notifiers[idx])
+            lock(thread_notifiers[idx])
+            try
+                notify(thread_notifiers[idx])
+            finally
+                unlock(thread_notifiers[idx])
+            end
             return
         end, Cvoid, (Cint,))
 
@@ -82,7 +87,7 @@ function do_threadcall(fun_ptr::Ptr{Cvoid}, cfptr::Ptr{Cvoid}, rettype::Type, ar
     # wait for a worker thread to be available
     acquire(threadcall_restrictor)
     idx = findfirst(isequal(nothing), thread_notifiers)::Int
-    thread_notifiers[idx] = Base.Condition()
+    thread_notifiers[idx] = Threads.Condition()
 
     GC.@preserve args_arr ret_arr roots begin
         # queue up the work to be done
@@ -91,7 +96,12 @@ function do_threadcall(fun_ptr::Ptr{Cvoid}, cfptr::Ptr{Cvoid}, rettype::Type, ar
             fun_ptr, cfptr, args_arr, ret_arr, c_notify_fun, idx)
 
         # wait for a result & return it
-        wait(thread_notifiers[idx])
+        lock(thread_notifiers[idx])
+        try
+            wait(thread_notifiers[idx])
+        finally
+            unlock(thread_notifiers[idx])
+        end
         thread_notifiers[idx] = nothing
         release(threadcall_restrictor)
 
