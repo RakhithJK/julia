@@ -143,7 +143,7 @@ const sval_dict = ScopedValue(Dict())
 # it, unshare the values explicitly. In this example we use `merge`
 # to unshare the state of the dictonary in parent scope.
 @sync begin
-    scoped(sval_dict => merge(sval_dict, Dict(:a => 10))) do
+    scoped(sval_dict => merge(sval_dict[], Dict(:a => 10))) do
         @spawn @show sval_dict[][:a]
     end
     @spawn sval_dict[][:a] = 3 # Not a race since they are unshared.
