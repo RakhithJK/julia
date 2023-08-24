@@ -153,7 +153,7 @@ macro scoped(exprs...)
         ex = last(exprs)
         exprs = exprs[1:end-1]
     elseif length(exprs) == 1
-        ex = only(args)
+        ex = only(exprs)
         exprs = ()
     else
         error("@scoped expects at least one argument")
