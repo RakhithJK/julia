@@ -25,6 +25,50 @@ The new scope will inherit all values from the parent scope
 (and recursively from all outer scopes) with the provided scoped
 value taking priority over previous definitions.
 
+Let's first look at an example of **lexical** scope:
+
+A `let` statements begins a new lexical scope within which the outer definition
+of `x` is shadowed by it's inner definition.
+
+```julia
+x = 1
+let x = 5
+    @show x # 5
+end
+@show x # 1
+```
+
+Since Julia uses lexical scope the variable `x` is bound within the function `f`
+to the global scope and entering a `let` scope does not change the value `f`
+observes.
+
+```julia
+x = 1
+f() = @show x
+let x = 5
+    f() # 1
+end
+f() # 1
+```
+
+Now using a `ScopedValue` we can use **dynamic** scoping.
+
+```julia
+x = ScopedValue(1)
+f() = @show x[]
+scoped(x=>5) do
+    f() # 5
+end
+f() # 1
+```
+
+Not that the observed value of the `ScopedValue` is dependent on the execution
+path of the program.
+
+It often makes sense to use a `const` variable to point to a scoped value,
+and you can set the value of multiple `ScopedValue`s with one call to `scoped`.
+
+
 ```julia
 const scoped_val = ScopedValue(1)
 const scoped_val2 = ScopedValue(0)
