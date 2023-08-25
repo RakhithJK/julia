@@ -508,7 +508,7 @@ end
     return nothing
 end
 
-with_logstate(f::Function, logstate) = @scoped(CURRENT_LOGSTATE => logstate, f())
+with_logstate(f::Function, logstate) = @with(CURRENT_LOGSTATE => logstate, f())
 
 #-------------------------------------------------------------------------------
 # Control of the current logger and early log filtering

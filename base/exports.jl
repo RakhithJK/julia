@@ -649,8 +649,8 @@ export
     summary,
 
 # ScopedValue
-    scoped,
-    @scoped,
+    with,
+    @with,
     ScopedValue,
 
 # logging

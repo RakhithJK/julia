@@ -2,13 +2,13 @@
 
 module ScopedValues
 
-export ScopedValue, scoped, @scoped
+export ScopedValue, with, @with
 
 """
     ScopedValue(x)
 
 Create a container that propagates values across dynamic scopes.
-Use [`scoped`](@ref) to create and enter a new dynamic scope.
+Use [`with`](@ref) to create and enter a new dynamic scope.
 
 Values can only be set when entering a new dynamic scope,
 and the value referred to will be constant during the
@@ -23,7 +23,7 @@ julia> const sval = ScopedValue(1);
 julia> sval[]
 1
 
-julia> scoped(sval => 2) do
+julia> with(sval => 2) do
            sval[]
        end
 2
@@ -122,11 +122,11 @@ function Base.show(io::IO, var::ScopedValue)
 end
 
 """
-    scoped(f, (var::ScopedValue{T} => val::T)...)
+    with(f, (var::ScopedValue{T} => val::T)...)
 
 Execute `f` in a new scope with `var` set to `val`.
 """
-function scoped(f, pair::Pair{<:ScopedValue}, rest::Pair{<:ScopedValue}...)
+function with(f, pair::Pair{<:ScopedValue}, rest::Pair{<:ScopedValue}...)
     @nospecialize
     ct = Base.current_task()
     current_scope = ct.scope::Union{Nothing, Scope}
@@ -139,16 +139,16 @@ function scoped(f, pair::Pair{<:ScopedValue}, rest::Pair{<:ScopedValue}...)
     end
 end
 
-scoped(@nospecialize(f)) = f()
+with(@nospecialize(f)) = f()
 
 """
-    @scoped vars... expr
+    @with vars... expr
 
-Macro version of `scoped(f, vars...)` but with `expr` instead of `f` function.
-This is similar to using [`scoped`](@ref) with a `do` block, but avoids creating
+Macro version of `with(f, vars...)` but with `expr` instead of `f` function.
+This is similar to using [`with`](@ref) with a `do` block, but avoids creating
 a closure.
 """
-macro scoped(exprs...)
+macro with(exprs...)
     if length(exprs) > 1
         ex = last(exprs)
         exprs = exprs[1:end-1]
@@ -156,11 +156,11 @@ macro scoped(exprs...)
         ex = only(exprs)
         exprs = ()
     else
-        error("@scoped expects at least one argument")
+        error("@with expects at least one argument")
     end
     for expr in exprs
         if expr.head !== :call || first(expr.args) !== :(=>)
-            error("@scoped expects arguments of the form `A => 2` got $expr")
+            error("@with expects arguments of the form `A => 2` got $expr")
         end
     end
     exprs = map(esc, exprs)

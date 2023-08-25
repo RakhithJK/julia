@@ -18,7 +18,7 @@ concurrently.
     implementation is available from the package ScopedValues.jl.
 
 In its simplest form you can create a [`ScopedValue`](@ref) with a
-default value and then use [`scoped`](@ref) or [`@scoped`](@ref) to
+default value and then use [`scoped`](@ref) or [`@with`](@ref) to
 enter a new dynamic scope.
 
 The new scope will inherit all values from the parent scope
@@ -56,7 +56,7 @@ Now using a `ScopedValue` we can use **dynamic** scoping.
 ```julia
 x = ScopedValue(1)
 f() = @show x[]
-scoped(x=>5) do
+with(x=>5) do
     f() # 5
 end
 f() # 1
@@ -76,10 +76,10 @@ const scoped_val2 = ScopedValue(0)
 # Enter a new dynamic scope and set value
 @show scoped_val[] # 1
 @show scoped_val2[] # 0
-scoped(scoped_val => 2) do
+with(scoped_val => 2) do
     @show scoped_val[] # 2
     @show scoped_val2[] # 0
-    scoped(scoped_val => 3, scoped_val2 => 5) do
+    with(scoped_val => 3, scoped_val2 => 5) do
         @show scoped_val[] # 3
         @show scoped_val2[] # 5
     end
@@ -95,7 +95,7 @@ it can sometimes be beneficial to use the macro form.
 
 ```julia
 const STATE = ScopedValue{Union{Nothing, State}}()
-with_state(f, state::State) = @scoped(STATE => state, f())
+with_state(f, state::State) = @with(STATE => state, f())
 ```
 
 !!! note
@@ -109,10 +109,10 @@ same scoped value at the same time.
 import Base.Threads: @spawn
 const scoped_val = ScopedValue(1)
 @sync begin
-    scoped(scoped_val => 2)
+    with(scoped_val => 2)
         @spawn @show scoped_val[] # 2
     end
-    scoped(scoped_val => 3)
+    with(scoped_val => 3)
         @spawn @show scoped_val[] # 3
     end
     @show scoped_val[] # 1
@@ -141,10 +141,10 @@ end
 @sync begin
     # If we instead pass a unique dictionary to each
     # task we can access the dictonaries race free.
-    scoped(sval_dict => Dict())
+    with(sval_dict => Dict())
         @spawn (sval_dict[][:a] = 3)
     end
-    scoped(sval_dict => Dict())
+    with(sval_dict => Dict())
         @spawn (sval_dict[][:b] = 3)
     end
 end
@@ -165,7 +165,7 @@ const LEVEL = ScopedValue(:GUEST)
 
 function serve(request, response)
     level = isAdmin(request) ? :ADMIN : :GUEST
-    scoped(LEVEL => level) do
+    with(LEVEL => level) do
         Threads.@spawn handle(request, respone)
     end
 end
@@ -196,7 +196,7 @@ const sval_dict = ScopedValue(Dict())
 # it, unshare the values explicitly. In this example we use `merge`
 # to unshare the state of the dictonary in parent scope.
 @sync begin
-    scoped(sval_dict => merge(sval_dict[], Dict(:a => 10))) do
+    with(sval_dict => merge(sval_dict[], Dict(:a => 10))) do
         @spawn @show sval_dict[][:a]
     end
     @spawn sval_dict[][:a] = 3 # Not a race since they are unshared.
@@ -214,7 +214,7 @@ const DEVICE = ScopedValue(:CPU)
 function solve_problem(args...)
     # Cache current device, by putting it
     # on top of the scope stack.
-    @scoped DEVICE => DEVICE[] begin
+    @with DEVICE => DEVICE[] begin
         # call functions that use `DEVICE[]` repeatedly.
     end
 ```
@@ -238,7 +238,7 @@ import Base.Threads: @spawn
 function main()
     role = ScopedValue(:client)
 
-    @scoped role => :server @spawn launch(role[])
+    @with role => :server @spawn launch(role[])
     launch(role[])
 end
 ```
@@ -251,7 +251,7 @@ in these cases.
 ```@docs
 Base.ScopedValues.ScopedValue
 Base.ScopedValues.scoped
-Base.ScopedValues.@scoped
+Base.ScopedValues.@with
 ```
 
 ## Implementation notes and performance
